@@ -78,11 +78,24 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle a link command, which doesn't open a dialog
-	if strings.HasPrefix(command.Text, "link ") {
+	if command.Text == "config" {
+		config, err := a.storage.GetChannelConfig(command.ChannelID)
+		if err != nil {
+			log.Printf("Got an error fetching configuration: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, fmt.Sprintf("Unable to load configuration: %+v", err))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, fmt.Sprintf("This channel is set to JIRA project: %s", config.Project))
+		return
+	} else if strings.HasPrefix(command.Text, "link ") {
 		project, err := a.handleChannelLink(command)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, fmt.Sprintf("Unable to set the channel's project: %+v", err))
+			return
 		}
 
 		w.WriteHeader(http.StatusOK)

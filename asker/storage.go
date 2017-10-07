@@ -2,6 +2,7 @@ package asker
 
 import (
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type Storage struct {
@@ -37,4 +38,15 @@ func (storage *Storage) SetChannelProject(channelID string, project string) erro
 	_, err := c.UpsertId(chanConfig.ChannelID, chanConfig)
 
 	return err
+}
+
+func (storage *Storage) GetChannelConfig(channelID string) (*ChannelConfig, error) {
+	c := storage.cxn.DB(storage.database).C(storage.collection)
+
+	result := ChannelConfig{}
+	err := c.Find(bson.M{"_id": channelID}).One(&result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
