@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -11,26 +12,35 @@ import (
 )
 
 type Asker struct {
-	OAuth string
-	Token string
-	api   *slack.Client
+	OAuth   string
+	Token   string
+	api     *slack.Client
+	storage *Storage
 }
 
 //var AskQueue map[string]*SlashCommand = make(map[string]int)
 
 var AskQueue = make(map[string]*SlashCommand)
 
-func NewAsker(oAuthToken string, token string) (*Asker, error) {
+func NewAsker(oAuthToken string, token string, mongodb string) (*Asker, error) {
+	storage, err := NewStorage(mongodb, "slack-asker", "channel_configs")
+	if err != nil {
+		return nil, err
+	}
+
 	client := Asker{
-		OAuth: oAuthToken,
-		Token: token,
-		api:   slack.New(oAuthToken),
+		OAuth:   oAuthToken,
+		Token:   token,
+		api:     slack.New(oAuthToken),
+		storage: storage,
 	}
 
 	return &client, nil
 }
 
 func (a *Asker) Listen(addr string) {
+	defer a.storage.CloseStorage()
+
 	r := mux.NewRouter()
 	r.HandleFunc("/events/ask", a.AskHandler)
 	r.HandleFunc("/events/request", a.RequestHandler)
@@ -48,12 +58,36 @@ func (a *Asker) Listen(addr string) {
 	log.Fatal(srv.ListenAndServe())
 }
 
+func (a *Asker) handleChannelLink(command *SlashCommand) (string, error) {
+	s := strings.Split(command.Text, " ")
+	cmd, project := s[0], s[1]
+	if cmd != "link" {
+		return "", fmt.Errorf("Invalid command, use /%s link <jira project>", command.Command)
+	}
+
+	err := a.storage.SetChannelProject(command.ChannelID, project)
+	return project, err
+}
+
 func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 	command, err := a.parseSlashCommand(r)
 	if err != nil {
 		log.Printf("Failed parsing slash command: %+v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Bad request")
+	}
+
+	// Handle a link command, which doesn't open a dialog
+	if strings.HasPrefix(command.Text, "link ") {
+		project, err := a.handleChannelLink(command)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, fmt.Sprintf("Unable to set the channel's project: %+v", err))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, fmt.Sprintf("Got it, set %s JIRA project to %s", command.ChannelName, project))
+		return
 	}
 
 	var callbackID = fmt.Sprintf("ask-%d", time.Now().UnixNano())

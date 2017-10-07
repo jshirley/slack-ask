@@ -2,10 +2,28 @@
 
 
 [[projects]]
+  name = "github.com/andygrunwald/go-jira"
+  packages = ["."]
+  revision = "acbc88d59582a4885dbd82fd775caa7c15245171"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "629574ca2a5df945712d3079857300b5e4da0236"
   version = "v1.4.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  revision = "53e6ce116135b80d037921a7fdd5138cf32d7a8a"
 
 [[projects]]
   name = "github.com/gorilla/context"
@@ -104,6 +122,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/trivago/tgo"
+  packages = ["tcontainer","treflect"]
+  revision = "e4d1ddd28c17dd89ed26327cf69fded22060671b"
+  version = "v1.0.1"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["websocket"]
@@ -123,6 +147,12 @@
 
 [[projects]]
   branch = "v2"
+  name = "gopkg.in/mgo.v2"
+  packages = [".","bson","internal/json","internal/sasl","internal/scram"]
+  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+
+[[projects]]
+  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
@@ -130,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1d888614c3f321978c73977045f53f5242b3975fd2ef3fd0dc6288fbf4243709"
+  inputs-digest = "2fd3e019f0a0d227f96d8a111cd478633213d5eac2495ba348ff843e9d1f6560"
   solver-name = "gps-cdcl"
   solver-version = 1

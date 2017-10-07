@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jshirley/slack-ask/asker"
@@ -31,6 +32,7 @@ var (
 	clientId string
 	secret   string
 	token    string
+	mongodb  string
 	bind     string
 )
 
@@ -53,7 +55,12 @@ var RootCmd = &cobra.Command{
 			fmt.Printf("Multi-account support is not setup yet, use oauth first and install manually into the workspace")
 			return
 		}
-		client, _ := asker.NewAsker(viper.GetString("oauth"), viper.GetString("token"))
+		client, err := asker.NewAsker(viper.GetString("oauth"), viper.GetString("token"), viper.GetString("mongodb"))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+
 		client.Listen(viper.GetString("bind"))
 	},
 }
@@ -78,12 +85,14 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&clientId, "client", "", "Slack Client ID")
 	RootCmd.PersistentFlags().StringVar(&secret, "secret", "", "Secret")
 	RootCmd.PersistentFlags().StringVar(&token, "token", "", "Slack verification token")
+	RootCmd.PersistentFlags().StringVar(&mongodb, "mongodb", "localhost:27017", "Connection string for MongoDB (default is localhost:27017)")
 	RootCmd.PersistentFlags().StringVar(&bind, "bind", ":3000", "Bind address to listen on (default is 0.0.0.0:3000)")
 
 	viper.BindPFlag("oauth", RootCmd.PersistentFlags().Lookup("oauth"))
 	viper.BindPFlag("client", RootCmd.PersistentFlags().Lookup("client"))
 	viper.BindPFlag("secret", RootCmd.PersistentFlags().Lookup("secret"))
 	viper.BindPFlag("token", RootCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("mongodb", RootCmd.PersistentFlags().Lookup("mongodb"))
 	viper.BindPFlag("bind", RootCmd.PersistentFlags().Lookup("bind"))
 }
 
