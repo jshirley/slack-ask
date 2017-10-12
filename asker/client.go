@@ -16,6 +16,7 @@ type Asker struct {
 	Token   string
 	api     *slack.Client
 	storage *Storage
+	Jira    *JiraClient
 }
 
 //var AskQueue map[string]*SlashCommand = make(map[string]int)
@@ -103,11 +104,20 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	config, err := a.storage.GetChannelConfig(command.ChannelID)
+	if err != nil {
+		w.WriteHeader(http.StatusOK)
+		// Send an empty response, because we'll use the responseURL later
+		fmt.Fprintf(w, "There is no /ask project configured for this channel. Use /ask link <PROJECT KEY> to link this channel to a JIRA project.")
+		return
+	}
+
+	command.Config = config
 	var callbackID = fmt.Sprintf("ask-%d", time.Now().UnixNano())
 	AskQueue[callbackID] = command
 
 	log.Printf("Got incoming /events/ask request, deserialize request:\n%+v\n", command)
-	a.OpenDialog(callbackID, command.TriggerID)
+	a.OpenDialog(callbackID, config, command.TriggerID)
 	w.WriteHeader(http.StatusOK)
 	// Send an empty response, because we'll use the responseURL later
 	fmt.Fprintf(w, "")
@@ -121,12 +131,11 @@ func (a *Asker) RequestHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Bad request")
 	}
 
-	log.Printf("Looking in AskQueue for %s\n", request.CallbackID)
 	if originalAsk, ok := AskQueue[request.CallbackID]; ok {
-		log.Printf("I found the original ask! Post something to response_url: %v\n", originalAsk.ResponseURL)
 		if err = a.PostAskResult(originalAsk, request); err != nil {
 			log.Printf("Unable to post response back: %v\n", err)
 		}
+		delete(AskQueue, request.CallbackID)
 	}
 
 	log.Printf("Got a request coming in for the dialog: \"%s\"\n", request.Submission["summary"])
@@ -148,5 +157,21 @@ func (a *Asker) GetGroups() {
 	}
 	for _, group := range groups {
 		fmt.Printf("ID: %s, Name: %s\n", group.ID, group.Name)
+	}
+}
+
+const TIMEOUT = 60 * 5 // 5 Minutes
+func (a *Asker) CleanQueue() {
+	for {
+		<-time.After(5 * time.Minute)
+		go a.removeQueueItems()
+	}
+}
+
+func (a *Asker) removeQueueItems() {
+	for callbackID, command := range AskQueue {
+		if command.Timestamp < time.Now().Unix()-TIMEOUT {
+			delete(AskQueue, callbackID)
+		}
 	}
 }

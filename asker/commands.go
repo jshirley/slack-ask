@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/gorilla/schema"
 	"github.com/nlopes/slack"
@@ -21,6 +22,14 @@ type SlackTeam struct {
 type SlackTuple struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type TicketRequest struct {
+	Username    string
+	ProjectKey  string
+	Summary     string
+	Description string
+	Priority    string
 }
 
 type InteractiveRequest struct {
@@ -48,6 +57,8 @@ type SlashCommand struct {
 	Text           string `schema:"text"`
 	ResponseURL    string `schema:"response_url"`
 	TriggerID      string `schema:"trigger_id"`
+	Config         *ChannelConfig
+	Timestamp      int64
 }
 
 type DialogOption struct {
@@ -91,6 +102,7 @@ func (a *Asker) parseSlashCommand(r *http.Request) (*SlashCommand, error) {
 		return nil, fmt.Errorf("Invalid token, check configuration or ensure someone isn't sending you bogus data")
 	}
 
+	command.Timestamp = time.Now().Unix()
 	return command, nil
 }
 
@@ -111,14 +123,14 @@ func (a *Asker) parseInteractiveRequest(r *http.Request) (*InteractiveRequest, e
 	return request, nil
 }
 
-func (a *Asker) OpenDialog(callback string, triggerId string) error {
+func (a *Asker) OpenDialog(callback string, config *ChannelConfig, triggerId string) error {
 	dialog := Dialog{
 		CallbackID:  callback,
-		Title:       "Ask a Question",
+		Title:       "Ask a Question", //fmt.Sprintf("Ask a Question!", config.Project),
 		SubmitLabel: "Ask!",
 		Elements: []DialogElement{
 			DialogElement{Type: "text", Label: "The one liner...", Name: "summary"},
-			DialogElement{Type: "textarea", Label: "The details", Name: "details", Placeholder: "What have you tried so far, stack traces, etc."},
+			DialogElement{Type: "textarea", Label: "The details", Name: "description", Placeholder: "What have you tried so far, stack traces, etc."},
 			DialogElement{
 				Type:        "select",
 				Label:       "Blocking?",
@@ -162,10 +174,24 @@ type SlackResponseResult struct {
 }
 
 func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveRequest) error {
+	ticket := TicketRequest{
+		Username:    "jshirley", //originalAsk.UserName,
+		Summary:     request.Submission["summary"],
+		Description: request.Submission["description"],
+		ProjectKey:  originalAsk.Config.Project,
+	}
+	issue, err := a.Jira.CreateIssue(&ticket)
 
-	response := SlackResponseResult{
-		ResponseType: "in_channel",
-		Text:         fmt.Sprintf("<@%s> is asking \"%s\"", originalAsk.UserID, request.Submission["summary"]),
+	response := SlackResponseResult{}
+	if err != nil {
+		response = SlackResponseResult{
+			Text: fmt.Sprintf("Sorry! We failed to create an issue for that... please try again, and if it is helpful the error is `%v`", err),
+		}
+	} else {
+		response = SlackResponseResult{
+			ResponseType: "in_channel",
+			Text:         fmt.Sprintf("<@%s> is asking \"%s\" (<%s|%s>)", originalAsk.UserID, request.Submission["summary"], a.Jira.GetTicketURL(issue.Key), issue.Key),
+		}
 	}
 
 	responseJson, err := json.Marshal(response)

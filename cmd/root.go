@@ -27,13 +27,16 @@ import (
 )
 
 var (
-	cfgFile  string
-	oauth    string
-	clientId string
-	secret   string
-	token    string
-	mongodb  string
-	bind     string
+	cfgFile      string
+	oauth        string
+	clientId     string
+	secret       string
+	token        string
+	mongodb      string
+	bind         string
+	jiraEndpoint string
+	jiraUsername string
+	jiraPassword string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -61,6 +64,15 @@ var RootCmd = &cobra.Command{
 			return
 		}
 
+		if viper.GetString("jira") != "" {
+			jiraClient, err := client.NewJira(viper.GetString("jira"), viper.GetString("jirauser"), viper.GetString("jirapass"))
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			client.Jira = jiraClient
+		}
+		go client.CleanQueue()
 		client.Listen(viper.GetString("bind"))
 	},
 }
@@ -88,12 +100,20 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&mongodb, "mongodb", "localhost:27017", "Connection string for MongoDB (default is localhost:27017)")
 	RootCmd.PersistentFlags().StringVar(&bind, "bind", ":3000", "Bind address to listen on (default is 0.0.0.0:3000)")
 
+	RootCmd.PersistentFlags().StringVar(&jiraEndpoint, "jira", "", "The JIRA endpoint to use")
+	RootCmd.PersistentFlags().StringVar(&jiraUsername, "jirauser", "", "The JIRA username")
+	RootCmd.PersistentFlags().StringVar(&jiraPassword, "jirapass", "", "The JIRA password")
+
 	viper.BindPFlag("oauth", RootCmd.PersistentFlags().Lookup("oauth"))
 	viper.BindPFlag("client", RootCmd.PersistentFlags().Lookup("client"))
 	viper.BindPFlag("secret", RootCmd.PersistentFlags().Lookup("secret"))
 	viper.BindPFlag("token", RootCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("mongodb", RootCmd.PersistentFlags().Lookup("mongodb"))
 	viper.BindPFlag("bind", RootCmd.PersistentFlags().Lookup("bind"))
+
+	viper.BindPFlag("jira", RootCmd.PersistentFlags().Lookup("jira"))
+	viper.BindPFlag("jirauser", RootCmd.PersistentFlags().Lookup("jirauser"))
+	viper.BindPFlag("jirapass", RootCmd.PersistentFlags().Lookup("jirapass"))
 }
 
 // initConfig reads in config file and ENV variables if set.
