@@ -43,6 +43,7 @@ func (a *Asker) Listen(addr string) {
 	defer a.storage.CloseStorage()
 
 	r := mux.NewRouter()
+	r.HandleFunc("/", a.RootHandler)
 	r.HandleFunc("/events/ask", a.AskHandler)
 	r.HandleFunc("/events/request", a.RequestHandler)
 	r.HandleFunc("/events/options", a.OptionsHandler)
@@ -68,6 +69,11 @@ func (a *Asker) handleChannelLink(command *SlashCommand) (string, error) {
 
 	err := a.storage.SetChannelProject(command.ChannelID, project)
 	return project, err
+}
+
+func (a *Asker) RootHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "I am alive, but there is nothing to see here.")
 }
 
 func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
