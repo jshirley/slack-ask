@@ -3,6 +3,7 @@ package asker
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -27,6 +28,7 @@ func (ask *Asker) NewJira(endpoint string, username string, password string) (*J
 func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, error) {
 	project, _, err := j.client.Project.Get(issueRequest.ProjectKey)
 	if err != nil {
+		log.Printf("Unable to fetch JIRA Project: %s\n", err)
 		return nil, err
 	}
 

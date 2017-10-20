@@ -175,11 +175,12 @@ type SlackResponseResult struct {
 
 func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveRequest) error {
 	ticket := TicketRequest{
-		Username:    "jshirley", //originalAsk.UserName,
+		Username:    originalAsk.UserName,
 		Summary:     request.Submission["summary"],
 		Description: request.Submission["description"],
 		ProjectKey:  originalAsk.Config.Project,
 	}
+	log.Printf("Creating a JIRA ticket in %s by %s\n", ticket.ProjectKey, ticket.Username)
 	issue, err := a.Jira.CreateIssue(&ticket)
 
 	response := SlackResponseResult{}
@@ -206,6 +207,7 @@ func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveReq
 	req = req.WithContext(context.Background())
 	resp, err := getHTTPClient().Do(req)
 	if err != nil {
+		log.Printf("Error posting response back to Slack: %s\n", err)
 		return err
 	}
 	defer resp.Body.Close()
