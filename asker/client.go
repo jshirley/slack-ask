@@ -77,7 +77,7 @@ func (a *Asker) RootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Got an incoming /ask command, validating")
+	log.Printf("Got an incoming /ask command, validating\n")
 	command, err := a.parseSlashCommand(r)
 	if err != nil {
 		log.Printf("Failed parsing or verifying slash command: %+v\n", err)
@@ -85,7 +85,7 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Bad request")
 	}
 
-	log.Printf("Handling valid /ask command")
+	log.Printf("Handling valid /ask command\n")
 	// Handle a link command, which doesn't open a dialog
 	if command.Text == "config" {
 		config, err := a.storage.GetChannelConfig(command.ChannelID)
@@ -114,7 +114,7 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 
 	config, err := a.storage.GetChannelConfig(command.ChannelID)
 	if err != nil {
-		log.Printf("Failed fetching channel configuration from storage: +%v", err)
+		log.Printf("Failed fetching channel configuration from storage: +%v\n", err)
 		w.WriteHeader(http.StatusOK)
 		// Send an empty response, because we'll use the responseURL later
 		fmt.Fprintf(w, "There is no /ask project configured for this channel. Use /ask link <PROJECT KEY> to link this channel to a JIRA project.")
@@ -133,7 +133,7 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Asker) RequestHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Handling incoming response for dialog, verifying authenticity")
+	log.Printf("Handling incoming response for dialog, verifying authenticity\n")
 	request, err := a.parseInteractiveRequest(r)
 	if err != nil {
 		log.Printf("Failed verifying interactive request: %+v\n", err)
@@ -147,7 +147,7 @@ func (a *Asker) RequestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		delete(AskQueue, request.CallbackID)
 	} else {
-		log.Printf("This is strange! We have a dialog with request ID %s, but that is not in the queue", request.CallbackID)
+		log.Printf("This is strange! We have a dialog with request ID %s, but that is not in the queue\n", request.CallbackID)
 	}
 
 	w.WriteHeader(http.StatusOK)

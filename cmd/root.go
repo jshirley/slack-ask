@@ -37,6 +37,7 @@ var (
 	jiraEndpoint string
 	jiraUsername string
 	jiraPassword string
+	jiraPublic   string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -65,7 +66,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if viper.GetString("jira") != "" {
-			jiraClient, err := client.NewJira(viper.GetString("jira"), viper.GetString("jirauser"), viper.GetString("jirapass"))
+			jiraClient, err := client.NewJira(viper.GetString("jira"), viper.GetString("jirauser"), viper.GetString("jirapass"), viper.GetString("publicJira"))
 			if err != nil {
 				log.Fatal(err)
 				return
@@ -103,6 +104,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&jiraEndpoint, "jira", "", "The JIRA endpoint to use")
 	RootCmd.PersistentFlags().StringVar(&jiraUsername, "jirauser", "", "The JIRA username")
 	RootCmd.PersistentFlags().StringVar(&jiraPassword, "jirapass", "", "The JIRA password")
+	RootCmd.PersistentFlags().StringVar(&jiraPublic, "publicJira", "", "The JIRA public endpoint (to link tickets at), you may not need this.")
 
 	viper.BindPFlag("oauth", RootCmd.PersistentFlags().Lookup("oauth"))
 	viper.BindPFlag("client", RootCmd.PersistentFlags().Lookup("client"))
@@ -114,6 +116,7 @@ func init() {
 	viper.BindPFlag("jira", RootCmd.PersistentFlags().Lookup("jira"))
 	viper.BindPFlag("jirauser", RootCmd.PersistentFlags().Lookup("jirauser"))
 	viper.BindPFlag("jirapass", RootCmd.PersistentFlags().Lookup("jirapass"))
+	viper.BindPFlag("publicJira", RootCmd.PersistentFlags().Lookup("publicJira"))
 }
 
 // initConfig reads in config file and ENV variables if set.

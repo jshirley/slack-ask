@@ -9,11 +9,13 @@ import (
 )
 
 type JiraClient struct {
-	endpoint string
-	client   *jira.Client
+	endpoint       string
+	publicEndpoint string
+	client         *jira.Client
 }
 
-func (ask *Asker) NewJira(endpoint string, username string, password string) (*JiraClient, error) {
+func (ask *Asker) NewJira(endpoint string, username string, password string, publicEndpoint string) (*JiraClient, error) {
+	log.Printf("Got public endpoint to use: %s\n", publicEndpoint)
 	client, err := jira.NewClient(nil, endpoint)
 	if err != nil {
 		panic(err)
@@ -22,7 +24,7 @@ func (ask *Asker) NewJira(endpoint string, username string, password string) (*J
 		client.Authentication.SetBasicAuth(username, password)
 	}
 
-	return &JiraClient{endpoint: endpoint, client: client}, nil
+	return &JiraClient{endpoint: endpoint, client: client, publicEndpoint: publicEndpoint}, nil
 }
 
 func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, error) {
@@ -52,7 +54,11 @@ func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, erro
 }
 
 func (j *JiraClient) GetTicketURL(key string) string {
-	return fmt.Sprintf("%s/browse/%s", j.endpoint, key)
+	if j.publicEndpoint != "" {
+		return fmt.Sprintf("%s/browse/%s", j.publicEndpoint, key)
+	} else {
+		return fmt.Sprintf("%s/browse/%s", j.endpoint, key)
+	}
 }
 
 func (j *JiraClient) GetComponents(projectKey string) ([]jira.ProjectComponent, error) {
