@@ -77,13 +77,15 @@ func (a *Asker) RootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Got an incoming /ask command, validating")
 	command, err := a.parseSlashCommand(r)
 	if err != nil {
-		log.Printf("Failed parsing slash command: %+v\n", err)
+		log.Printf("Failed parsing or verifying slash command: %+v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Bad request")
 	}
 
+	log.Printf("Handling valid /ask command")
 	// Handle a link command, which doesn't open a dialog
 	if command.Text == "config" {
 		config, err := a.storage.GetChannelConfig(command.ChannelID)
@@ -112,6 +114,7 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 
 	config, err := a.storage.GetChannelConfig(command.ChannelID)
 	if err != nil {
+		log.Printf("Failed fetching channel configuration from storage: +%v", err)
 		w.WriteHeader(http.StatusOK)
 		// Send an empty response, because we'll use the responseURL later
 		fmt.Fprintf(w, "There is no /ask project configured for this channel. Use /ask link <PROJECT KEY> to link this channel to a JIRA project.")
@@ -122,7 +125,7 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 	var callbackID = fmt.Sprintf("ask-%d", time.Now().UnixNano())
 	AskQueue[callbackID] = command
 
-	log.Printf("Got incoming /events/ask request, deserialize request:\n%+v\n", command)
+	log.Printf("Got incoming /ask request, deserialize request:\n%+v\n", command)
 	a.OpenDialog(callbackID, config, command.TriggerID)
 	w.WriteHeader(http.StatusOK)
 	// Send an empty response, because we'll use the responseURL later
@@ -130,9 +133,10 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Asker) RequestHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Handling incoming response for dialog, verifying authenticity")
 	request, err := a.parseInteractiveRequest(r)
 	if err != nil {
-		log.Printf("Failed parsing slash command: %+v\n", err)
+		log.Printf("Failed verifying interactive request: %+v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "Bad request")
 	}
@@ -142,9 +146,10 @@ func (a *Asker) RequestHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Unable to post response back: %v\n", err)
 		}
 		delete(AskQueue, request.CallbackID)
+	} else {
+		log.Printf("This is strange! We have a dialog with request ID %s, but that is not in the queue", request.CallbackID)
 	}
 
-	log.Printf("Got a request coming in for the dialog: \"%s\"\n", request.Submission["summary"])
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "")
 }
