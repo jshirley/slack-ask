@@ -30,7 +30,13 @@ func (ask *Asker) NewJira(endpoint string, username string, password string, pub
 func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, error) {
 	project, _, err := j.client.Project.Get(issueRequest.ProjectKey)
 	if err != nil {
-		log.Printf("Unable to fetch JIRA Project: %s\n", err)
+		log.Printf("Unable to fetch JIRA project `%s`: %s\n", issueRequest.ProjectKey, err)
+		return nil, err
+	}
+
+	components, err := j.getComponentsForRequest(issueRequest)
+	if err != nil {
+		log.Printf("Unable to fetch JIRA components for `%s`: %s\n", issueRequest.ProjectKey, err)
 		return nil, err
 	}
 
@@ -41,6 +47,7 @@ func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, erro
 			Project:     jira.Project{Key: issueRequest.ProjectKey},
 			Summary:     issueRequest.Summary,
 			Description: issueRequest.Description,
+			Components:  components,
 		},
 	}
 	issue, resp, err := j.client.Issue.Create(i)
@@ -51,6 +58,10 @@ func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, erro
 	}
 
 	return issue, nil
+}
+
+func (j *JiraClient) getComponentsForRequest(issueRequest *TicketRequest) ([]*jira.Component, error) {
+	return nil, nil
 }
 
 func (j *JiraClient) GetTicketURL(key string) string {

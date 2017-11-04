@@ -30,6 +30,7 @@ type TicketRequest struct {
 	Summary     string
 	Description string
 	Priority    string
+	Components  []string
 }
 
 type InteractiveRequest struct {
