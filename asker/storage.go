@@ -15,6 +15,7 @@ type ChannelConfig struct {
 	ChannelID      string
 	ChannelName    string
 	Project        string
+	Components     []string
 	AssignEndpoint string
 }
 
@@ -31,11 +32,20 @@ func (storage *Storage) CloseStorage() {
 }
 
 func (storage *Storage) SetChannelProject(channelID string, project string) error {
-	chanConfig := &ChannelConfig{ChannelID: channelID, Project: project}
+	channelConfig := &ChannelConfig{ChannelID: channelID, Project: project}
 	c := storage.cxn.DB(storage.database).C(storage.collection)
 
 	// TODO: Validate that project is even legit by talking to the JIRA API
-	_, err := c.UpsertId(chanConfig.ChannelID, chanConfig)
+	_, err := c.UpsertId(channelConfig.ChannelID, channelConfig)
+
+	return err
+}
+
+func (storage *Storage) SetChannelConfig(channelConfig *ChannelConfig) error {
+	c := storage.cxn.DB(storage.database).C(storage.collection)
+
+	// TODO: Validate that project is even legit by talking to the JIRA API
+	_, err := c.UpsertId(channelConfig.ChannelID, channelConfig)
 
 	return err
 }

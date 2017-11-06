@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	jira "github.com/andygrunwald/go-jira"
 )
@@ -30,7 +31,13 @@ func (ask *Asker) NewJira(endpoint string, username string, password string, pub
 func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, error) {
 	project, _, err := j.client.Project.Get(issueRequest.ProjectKey)
 	if err != nil {
-		log.Printf("Unable to fetch JIRA Project: %s\n", err)
+		log.Printf("Unable to fetch JIRA project `%s`: %s\n", issueRequest.ProjectKey, err)
+		return nil, err
+	}
+
+	components, err := j.getComponentsForRequest(project, issueRequest)
+	if err != nil {
+		log.Printf("Unable to fetch JIRA components for `%s`: %s\n", issueRequest.ProjectKey, err)
 		return nil, err
 	}
 
@@ -41,6 +48,7 @@ func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, erro
 			Project:     jira.Project{Key: issueRequest.ProjectKey},
 			Summary:     issueRequest.Summary,
 			Description: issueRequest.Description,
+			Components:  components,
 		},
 	}
 	issue, resp, err := j.client.Issue.Create(i)
@@ -51,6 +59,19 @@ func (j *JiraClient) CreateIssue(issueRequest *TicketRequest) (*jira.Issue, erro
 	}
 
 	return issue, nil
+}
+
+func (j *JiraClient) getComponentsForRequest(project *jira.Project, issueRequest *TicketRequest) ([]*jira.Component, error) {
+	var components []*jira.Component
+
+	for _, compName := range issueRequest.Components {
+		for _, projectComponent := range project.Components {
+			if strings.ToLower(projectComponent.Name) == strings.ToLower(compName) {
+				components = append(components, &jira.Component{ID: projectComponent.ID, Name: projectComponent.Name})
+			}
+		}
+	}
+	return components, nil
 }
 
 func (j *JiraClient) GetTicketURL(key string) string {

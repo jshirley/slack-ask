@@ -76,6 +76,39 @@ func (a *Asker) RootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "I am alive, but there is nothing to see here.")
 }
 
+func (a *Asker) handleConfigCommand(command *SlashCommand, w http.ResponseWriter, r *http.Request) {
+	commands := strings.Split(command.Text, " ")
+
+	config, err := a.storage.GetChannelConfig(command.ChannelID)
+	if err != nil {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, fmt.Sprintf("Unable to load configuration (do you need to `/ask link <PROJECTKEY>` first?)\nThe error from storage is: %+v", err))
+		return
+	}
+
+	if len(commands) == 1 {
+		w.WriteHeader(http.StatusOK)
+		components := strings.Join(config.Components, ", ")
+		if components == "" {
+			components = "None! Use `/ask config components Component1 Component2` to set them"
+		}
+		fmt.Fprintf(w, fmt.Sprintf("This channel is set to JIRA project: %s\nDefault components: %s", config.Project, components))
+	} else if commands[1] == "components" {
+		config.Components = commands[2:len(commands)]
+		err := a.storage.SetChannelConfig(config)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, fmt.Sprintf("Unable to store configuration: %+v", err))
+		} else {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, fmt.Sprintf("Got it, default components for `%s` are now %v!", config.Project, config.Components))
+		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, fmt.Sprintf("Invalid config command. Available options are `/ask config`, `/ask config components Comp1 Comp2`, and maybe more. Patches welcome!"))
+	}
+}
+
 func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Got an incoming /ask command, validating\n")
 	command, err := a.parseSlashCommand(r)
@@ -86,18 +119,8 @@ func (a *Asker) AskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("Handling valid /ask command\n")
-	// Handle a link command, which doesn't open a dialog
-	if command.Text == "config" {
-		config, err := a.storage.GetChannelConfig(command.ChannelID)
-		if err != nil {
-			log.Printf("Got an error fetching configuration: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, fmt.Sprintf("Unable to load configuration: %+v", err))
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, fmt.Sprintf("This channel is set to JIRA project: %s", config.Project))
+	if strings.HasPrefix(command.Text, "config") {
+		a.handleConfigCommand(command, w, r)
 		return
 	} else if strings.HasPrefix(command.Text, "link ") {
 		project, err := a.handleChannelLink(command)
