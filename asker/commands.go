@@ -180,6 +180,7 @@ func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveReq
 		Summary:     request.Submission["summary"],
 		Description: request.Submission["description"],
 		ProjectKey:  originalAsk.Config.Project,
+		Components:  originalAsk.Config.Components,
 	}
 	log.Printf("Creating a JIRA ticket in %s by %s\n", ticket.ProjectKey, ticket.Username)
 	issue, err := a.Jira.CreateIssue(&ticket)
