@@ -12,11 +12,12 @@ import (
 )
 
 type Asker struct {
-	OAuth   string
-	Token   string
-	api     *slack.Client
-	storage *Storage
-	Jira    *JiraClient
+	OAuth          string
+	Token          string
+	api            *slack.Client
+	storage        *Storage
+	Jira           *JiraClient
+	dialogElements []DialogElement
 }
 
 //var AskQueue map[string]*SlashCommand = make(map[string]int)

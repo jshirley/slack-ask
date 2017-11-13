@@ -59,10 +59,21 @@ var RootCmd = &cobra.Command{
 			fmt.Printf("Multi-account support is not setup yet, use oauth first and install manually into the workspace")
 			return
 		}
+
 		client, err := asker.NewAsker(viper.GetString("oauth"), viper.GetString("token"), viper.GetString("mongodb"))
 		if err != nil {
 			log.Fatal(err)
 			return
+		}
+
+		var dialog asker.Dialog
+		unmarshalError := viper.Unmarshal(&dialog)
+		if unmarshalError == nil && len(dialog.Elements) > 0 {
+			err := client.SetDialogElements(dialog)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 		}
 
 		if viper.GetString("jira") != "" {
@@ -121,6 +132,8 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.SetConfigType("yaml")
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
@@ -142,5 +155,8 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

@@ -62,27 +62,6 @@ type SlashCommand struct {
 	Timestamp      int64
 }
 
-type DialogOption struct {
-	Label string `json:"label"`
-	Value string `json:"value"`
-}
-
-type DialogElement struct {
-	Type        string         `json:"type"`
-	Label       string         `json:"label"`
-	Name        string         `json:"name"`
-	Placeholder string         `json:"placeholder,omitempty"`
-	Value       string         `json:"value,omitempty"`
-	Options     []DialogOption `json:"options,omitempty"`
-}
-
-type Dialog struct {
-	CallbackID  string          `json:"callback_id"`
-	Title       string          `json:"title"`
-	SubmitLabel string          `json:"submit_label"`
-	Elements    []DialogElement `json:"elements"`
-}
-
 func (a *Asker) parseSlashCommand(r *http.Request) (*SlashCommand, error) {
 	err := r.ParseForm()
 
@@ -125,27 +104,7 @@ func (a *Asker) parseInteractiveRequest(r *http.Request) (*InteractiveRequest, e
 }
 
 func (a *Asker) OpenDialog(callback string, config *ChannelConfig, triggerId string) error {
-	dialog := Dialog{
-		CallbackID:  callback,
-		Title:       "Ask a Question", //fmt.Sprintf("Ask a Question!", config.Project),
-		SubmitLabel: "Ask!",
-		Elements: []DialogElement{
-			DialogElement{Type: "text", Label: "The one liner...", Name: "summary"},
-			DialogElement{Type: "textarea", Label: "The details", Name: "description", Placeholder: "What have you tried so far, stack traces, etc."},
-			DialogElement{
-				Type:        "select",
-				Label:       "Blocking?",
-				Name:        "blocking",
-				Placeholder: "Are you actively blocked and need someone now?",
-				Value:       "no",
-				Options: []DialogOption{
-					DialogOption{"No", "no"},
-					DialogOption{"Yes", "yes"},
-					DialogOption{"I'm about to page!", "911"},
-				},
-			},
-		},
-	}
+	dialog := a.GetDialog(callback)
 
 	dialogJson, err := json.Marshal(dialog)
 	if err != nil {
