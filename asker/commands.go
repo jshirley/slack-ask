@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/jshirley/slack-ask/storage"
+
 	"github.com/gorilla/schema"
 	"github.com/nlopes/slack"
 )
@@ -44,32 +46,14 @@ type InteractiveRequest struct {
 	Token      string            `json:"token"`
 }
 
-type SlashCommand struct {
-	Token          string `schema:"token"`
-	TeamID         string `schema:"team_id"`
-	TeamDomain     string `schema:"team_domain"`
-	EnterpriseID   string `schema:"enterprise_id"`
-	EnterpriseName string `schema:"enterprise_name"`
-	ChannelID      string `schema:"channel_id"`
-	ChannelName    string `schema:"channel_name"`
-	UserID         string `schema:"user_id"`
-	UserName       string `schema:"user_name"`
-	Command        string `schema:"command"`
-	Text           string `schema:"text"`
-	ResponseURL    string `schema:"response_url"`
-	TriggerID      string `schema:"trigger_id"`
-	Config         *ChannelConfig
-	Timestamp      int64
-}
-
-func (a *Asker) parseSlashCommand(r *http.Request) (*SlashCommand, error) {
+func (a *Asker) parseSlashCommand(r *http.Request) (*storage.SlashCommand, error) {
 	err := r.ParseForm()
 
 	if err != nil {
 		return nil, err
 	}
 
-	command := new(SlashCommand)
+	command := new(storage.SlashCommand)
 
 	decoder := schema.NewDecoder()
 	err = decoder.Decode(command, r.PostForm)
@@ -103,7 +87,7 @@ func (a *Asker) parseInteractiveRequest(r *http.Request) (*InteractiveRequest, e
 	return request, nil
 }
 
-func (a *Asker) OpenDialog(callback string, config *ChannelConfig, triggerId string) error {
+func (a *Asker) OpenDialog(callback string, config *storage.ChannelConfig, triggerId string) error {
 	dialog := a.GetDialog(callback)
 
 	dialogJson, err := json.Marshal(dialog)
@@ -123,7 +107,7 @@ func (a *Asker) OpenDialog(callback string, config *ChannelConfig, triggerId str
 	if err != nil {
 		return err
 	}
-	log.Printf("Got a response from Slack: %+v\n", response)
+	log.Printf("Got a response from Slack, are things ok? %+v\n", response.Ok)
 	return nil
 }
 
@@ -133,7 +117,7 @@ type SlackResponseResult struct {
 	Attachments  []slack.Attachment `json:"attachments"`
 }
 
-func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveRequest) error {
+func (a *Asker) PostAskResult(originalAsk *storage.SlashCommand, request *InteractiveRequest) error {
 	ticket := TicketRequest{
 		Username:    originalAsk.UserName,
 		Summary:     request.Submission["summary"],
@@ -152,7 +136,7 @@ func (a *Asker) PostAskResult(originalAsk *SlashCommand, request *InteractiveReq
 	} else {
 		response = SlackResponseResult{
 			ResponseType: "in_channel",
-			Text:         fmt.Sprintf("<@%s> is asking \"%s\" (<%s|%s>)", originalAsk.UserID, request.Submission["summary"], a.Jira.GetTicketURL(issue.Key), issue.Key),
+			Text:         fmt.Sprintf("<@%s> is `/ask`ing \"%s\" (<%s|%s>)", originalAsk.UserID, request.Submission["summary"], a.Jira.GetTicketURL(issue.Key), issue.Key),
 		}
 	}
 
